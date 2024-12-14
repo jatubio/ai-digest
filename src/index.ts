@@ -124,7 +124,7 @@ async function aggregateFiles(inputDir: string, outputFile: string, useDefaultIg
     }
 
     await fs.mkdir(path.dirname(outputFile), { recursive: true });
-    await fs.writeFile(outputFile, output, { flag: 'w' });
+    await fs.writeFile(outputFile, output, { flag: 'w', encoding: 'utf8' });
     
     const stats = await fs.stat(outputFile);
     const fileSizeInBytes = stats.size;

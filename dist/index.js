@@ -76,32 +76,48 @@ async function aggregateFiles(inputDir, outputFile, useDefaultIgnores, removeWhi
                 customIgnoredCount++;
             }
             else {
-                if (await (0, utils_1.isTextFile)(fullPath) && !(0, utils_1.shouldTreatAsBinary)(fullPath)) {
-                    let content = await fs_1.promises.readFile(fullPath, 'utf-8');
-                    const extension = path_1.default.extname(file);
-                    content = (0, utils_1.escapeTripleBackticks)(content);
-                    if (removeWhitespaceFlag && !utils_1.WHITESPACE_DEPENDENT_EXTENSIONS.includes(extension)) {
-                        content = (0, utils_1.removeWhitespace)(content);
-                    }
-                    output += `# ${relativePath}\n\n`;
-                    output += `\`\`\`${extension.slice(1)}\n`;
-                    output += content;
-                    output += '\n\`\`\`\n\n';
-                    includedCount++;
-                    includedFiles.push(relativePath);
-                }
-                else {
-                    const fileType = (0, utils_1.getFileType)(fullPath);
-                    output += `# ${relativePath}\n\n`;
-                    if (fileType === 'SVG Image') {
-                        output += `This is a file of the type: ${fileType}\n\n`;
+                try {
+                    if (await (0, utils_1.isTextFile)(fullPath) && !(0, utils_1.shouldTreatAsBinary)(fullPath)) {
+                        let content = await fs_1.promises.readFile(fullPath, 'utf-8');
+                        // Detect and handle null bytes
+                        if (content.includes('\u0000')) {
+                            console.warn((0, utils_1.formatLog)(`Warning: File ${relativePath} contains null bytes.`, '⚠️'));
+                            content = content.replace(/\u0000/g, ''); // Remove null bytes
+                        }
+                        // Escape and process the content
+                        content = (0, utils_1.escapeTripleBackticks)(content);
+                        const extension = path_1.default.extname(file);
+                        if (removeWhitespaceFlag && !utils_1.WHITESPACE_DEPENDENT_EXTENSIONS.includes(extension)) {
+                            content = (0, utils_1.removeWhitespace)(content);
+                        }
+                        output += `# ${relativePath}\n\n`;
+                        output += `\`\`\`${extension.slice(1)}\n`;
+                        output += content;
+                        output += '\n\`\`\`\n\n';
+                        includedCount++;
+                        includedFiles.push(relativePath);
                     }
                     else {
-                        output += `This is a binary file of the type: ${fileType}\n\n`;
+                        const fileType = (0, utils_1.getFileType)(fullPath);
+                        output += `# ${relativePath}\n\n`;
+                        if (fileType === 'SVG Image') {
+                            output += `This is a file of the type: ${fileType}\n\n`;
+                        }
+                        else {
+                            output += `This is a binary file of the type: ${fileType}\n\n`;
+                        }
+                        binaryAndSvgFileCount++;
+                        includedCount++;
+                        includedFiles.push(relativePath);
                     }
-                    binaryAndSvgFileCount++;
-                    includedCount++;
-                    includedFiles.push(relativePath);
+                }
+                catch (error) {
+                    if (error instanceof Error) {
+                        console.warn((0, utils_1.formatLog)(`Error processing file ${relativePath}: ${error.message}`, '❌'));
+                    }
+                    else {
+                        console.warn((0, utils_1.formatLog)(`Error processing file ${relativePath}: Unknown error`, '❌'));
+                    }
                 }
             }
         }
@@ -109,9 +125,6 @@ async function aggregateFiles(inputDir, outputFile, useDefaultIgnores, removeWhi
         await fs_1.promises.writeFile(outputFile, output, { flag: 'w', encoding: 'utf8' });
         const stats = await fs_1.promises.stat(outputFile);
         const fileSizeInBytes = stats.size;
-        if (stats.size !== Buffer.byteLength(output)) {
-            throw new Error('File size mismatch after writing');
-        }
         console.log((0, utils_1.formatLog)(`Files aggregated successfully into ${outputFile}`, '✅'));
         console.log((0, utils_1.formatLog)(`Total files found: ${allFiles.length}`, '📚'));
         console.log((0, utils_1.formatLog)(`Files included in output: ${includedCount}`, '📎'));
@@ -124,13 +137,10 @@ async function aggregateFiles(inputDir, outputFile, useDefaultIgnores, removeWhi
         console.log((0, utils_1.formatLog)(`Binary and SVG files included: ${binaryAndSvgFileCount}`, '📦'));
         if (fileSizeInBytes > MAX_FILE_SIZE) {
             console.log((0, utils_1.formatLog)(`Warning: Output file size (${(fileSizeInBytes / 1024 / 1024).toFixed(2)} MB) exceeds 10 MB.`, '⚠️'));
-            console.log((0, utils_1.formatLog)('Token count estimation skipped due to large file size.', '⚠️'));
-            console.log((0, utils_1.formatLog)('Consider adding more files to .aidigestignore to reduce the output size.', '💡'));
         }
         else {
             const tokenCount = (0, utils_1.estimateTokenCount)(output);
             console.log((0, utils_1.formatLog)(`Estimated token count: ${tokenCount}`, '🔢'));
-            console.log((0, utils_1.formatLog)('Note: Token count is an approximation using GPT-4 tokenizer. For ChatGPT, it should be accurate. For Claude, it may be ±20% approximately.', '⚠️'));
         }
         if (showOutputFiles) {
             displayIncludedFiles(includedFiles);

@@ -91,47 +91,52 @@ async function aggregateFiles(inputDir: string, outputFile: string, useDefaultIg
       } else if (customIgnore.ignores(relativePath)) {
         customIgnoredCount++;
       } else {
-        try {
-          if (await isTextFile(fullPath) && !shouldTreatAsBinary(fullPath)) {
-            let content = await fs.readFile(fullPath, 'utf-8');
+		try {
+		  if (await isTextFile(fullPath) && !shouldTreatAsBinary(fullPath)) {
+			let content = await fs.readFile(fullPath, 'utf-8');
 
-            // Detect and handle null bytes
-            if (content.includes('\u0000')) {
-              console.warn(formatLog(`Warning: File ${relativePath} contains null bytes.`, '⚠️'));
-              content = content.replace(/\u0000/g, ''); // Remove null bytes
-            }
+			// Detect and handle null bytes
+			if (content.includes('\u0000')) {
+			  console.warn(formatLog(`Warning: File ${relativePath} contains null bytes.`, '⚠️'));
+			  content = content.replace(/\u0000/g, ''); // Remove null bytes
+			}
 
-            // Escape and process the content
-            content = escapeTripleBackticks(content);
-            const extension = path.extname(file);
+			// Escape and process the content
+			content = escapeTripleBackticks(content);
+			const extension = path.extname(file);
 
-            if (removeWhitespaceFlag && !WHITESPACE_DEPENDENT_EXTENSIONS.includes(extension)) {
-              content = removeWhitespace(content);
-            }
+			if (removeWhitespaceFlag && !WHITESPACE_DEPENDENT_EXTENSIONS.includes(extension)) {
+			  content = removeWhitespace(content);
+			}
 
-            output += `# ${relativePath}\n\n`;
-            output += `\`\`\`${extension.slice(1)}\n`;
-            output += content;
-            output += '\n\`\`\`\n\n';
+			output += `# ${relativePath}\n\n`;
+			output += `\`\`\`${extension.slice(1)}\n`;
+			output += content;
+			output += '\n\`\`\`\n\n';
 
-            includedCount++;
-            includedFiles.push(relativePath);
-          } else {
-            const fileType = getFileType(fullPath);
-            output += `# ${relativePath}\n\n`;
-            if (fileType === 'SVG Image') {
-              output += `This is a file of the type: ${fileType}\n\n`;
-            } else {
-              output += `This is a binary file of the type: ${fileType}\n\n`;
-            }
+			includedCount++;
+			includedFiles.push(relativePath);
+		  } else {
+			const fileType = getFileType(fullPath);
+			output += `# ${relativePath}\n\n`;
+			if (fileType === 'SVG Image') {
+			  output += `This is a file of the type: ${fileType}\n\n`;
+			} else {
+			  output += `This is a binary file of the type: ${fileType}\n\n`;
+			}
 
-            binaryAndSvgFileCount++;
-            includedCount++;
-            includedFiles.push(relativePath);
-          }
-        } catch (error) {
-          console.warn(formatLog(`Error processing file ${relativePath}: ${error.message}`, '❌'));
-        }
+			binaryAndSvgFileCount++;
+			includedCount++;
+			includedFiles.push(relativePath);
+		  }
+		} catch (error) {
+		  if (error instanceof Error) {
+			console.warn(formatLog(`Error processing file ${relativePath}: ${error.message}`, '❌'));
+		  } else {
+			console.warn(formatLog(`Error processing file ${relativePath}: Unknown error`, '❌'));
+		  }
+		}
+
       }
     }
 

@@ -1,4 +1,4 @@
-import { Ignore } from "ignore";
+import ignore from "ignore"; // Cambia la importación
 import { isBinaryFile } from "isbinaryfile";
 import { encodingForModel } from "js-tiktoken";
 import path from 'path';
@@ -111,8 +111,8 @@ export function escapeTripleBackticks(content: string): string {
   return content.replace(/\`\`\`/g, "\\`\\`\\`");
 }
 
-export function createIgnoreFilter(ignorePatterns: string[], ignoreFile: string): Ignore {
-  const ig = require("ignore")().add(ignorePatterns);
+export function createIgnoreFilter(ignorePatterns: string[], ignoreFile: string) {
+  const ig = ignore().add(ignorePatterns); // Usa el método `ignore()`
   if (ignorePatterns.length > 0) {
     console.log(`Ignore patterns from ${ignoreFile}:`);
     ignorePatterns.forEach((pattern) => {
@@ -121,7 +121,7 @@ export function createIgnoreFilter(ignorePatterns: string[], ignoreFile: string)
   } else {
     console.log("No custom ignore patterns found.");
   }
-  return ig;
+  return ig; // Retorna directamente el objeto de la función `ignore()`
 }
 
 export function estimateTokenCount(text: string): number {
